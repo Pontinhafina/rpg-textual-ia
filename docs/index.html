@@ -1,0 +1,2207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG Textual: Mestre IA (Local)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&display=swap');
+        
+        :root {
+            --primary-dark: #1a1f2e;
+            --primary-medium: #2a3245;
+            --primary-light: #3a445c;
+            --accent-gold: #d4af37;
+            --accent-red: #c41e3a;
+            --accent-blue: #1e90ff;
+            --text-light: #f5f5f5;
+            --text-dim: #b8b8b8;
+        }
+        
+        body {
+            font-family: 'Merriweather', serif;
+            background-color: var(--primary-dark);
+            color: var(--text-light);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(42, 50, 69, 0.5) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(42, 50, 69, 0.5) 0%, transparent 20%);
+        }
+
+        #main-header {
+            background: linear-gradient(145deg, var(--primary-medium) 0%, var(--primary-dark) 100%);
+            border: 2px solid var(--accent-gold);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(212, 175, 55, 0.2);
+        }
+        
+        #main-header h1 {
+            font-family: 'Cinzel', serif; 
+            font-size: 2.5rem; 
+            text-shadow: 0 0 8px var(--accent-gold), 0 0 15px rgba(212, 175, 55, 0.6); 
+            color: var(--accent-gold);
+        }
+        
+        #character-name-display { 
+            color: var(--accent-gold); 
+            text-shadow: 0 0 3px rgba(212, 175, 55, 0.3); 
+        }
+
+        /* Chat area styling */
+        #chat-area { 
+            background-color: #1e1a1a;
+            color: var(--text-light); 
+            border: 2px solid #3a2e2a;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+        }
+        
+        .message-box { 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); 
+            padding: 1rem 1.5rem; 
+            margin-bottom: 1rem;
+        }
+        
+        .user-message { 
+            background: linear-gradient(135deg, #2a3c5f 0%, #1e2a47 100%);
+            color: var(--text-light); 
+            margin-left: auto; 
+            border: 1px solid #3a5278;
+        }
+        
+        .ai-message { 
+            background: linear-gradient(135deg, #3a2e2a 0%, #2a221f 100%);
+            color: var(--text-light); 
+            border-left: 6px solid var(--accent-gold);
+            margin-right: auto; 
+        }
+
+        .combat-message {
+            background: linear-gradient(135deg, #5a2e2e 0%, #3a1e1e 100%);
+            border-left: 6px solid var(--accent-red);
+        }
+
+        .level-up-message {
+            background: linear-gradient(135deg, #2e5a3a 0%, #1e3a2a 100%);
+            border-left: 6px solid #44ff44;
+        }
+
+        .spell-message {
+            background: linear-gradient(135deg, #2e3a5a 0%, #1e2a3a 100%);
+            border-left: 6px solid var(--accent-blue);
+        }
+
+        /* Input and Button theme */
+        #user-input { 
+            background-color: #2a221f; 
+            border: 2px solid #3a2e2a; 
+            color: var(--text-light); 
+        }
+        
+        #send-button { 
+            background: linear-gradient(135deg, var(--accent-gold) 0%, #b8941f 100%);
+            color: var(--primary-dark); 
+            border: 1px solid var(--accent-gold);
+        }
+
+        .combat-button {
+            background: linear-gradient(135deg, var(--accent-red) 0%, #a61e3a 100%);
+            color: white;
+            border: 1px solid var(--accent-red);
+        }
+
+        .skill-button {
+            background: linear-gradient(135deg, var(--accent-blue) 0%, #1e70ff 100%);
+            color: white;
+            border: 1px solid var(--accent-blue);
+        }
+
+        .spell-button {
+            background: linear-gradient(135deg, #8a2be2 0%, #6a1bb2 100%);
+            color: white;
+            border: 1px solid #8a2be2;
+        }
+
+        /* Modal styling */
+        #character-setup { z-index: 70; }
+        
+        .modal-content { 
+            background: linear-gradient(135deg, var(--primary-medium) 0%, var(--primary-dark) 100%);
+            border: 2px solid var(--accent-gold); 
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-content h2 { 
+            color: var(--accent-gold); 
+        }
+
+        /* Sidebar styling */
+        #sidebar { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            height: 100%; 
+            width: 300px; 
+            transform: translateX(-100%); 
+            transition: transform 0.3s ease-in-out; 
+            z-index: 50; 
+            overflow-y: auto; 
+            background: linear-gradient(135deg, var(--primary-medium) 0%, var(--primary-dark) 100%);
+            border-right: 2px solid var(--accent-gold);
+        }
+        
+        #sidebar.open { transform: translateX(0); }
+        
+        @media (min-width: 768px) { 
+            #sidebar { 
+                position: relative; 
+                transform: translateX(0); 
+                min-width: 300px; 
+                width: 300px; 
+            } 
+        }
+        
+        #sidebar-toggle { 
+            display: block; 
+            position: fixed; 
+            left: 1rem; 
+            top: 1rem; 
+            z-index: 60; 
+            background-color: var(--accent-gold); 
+            color: var(--primary-dark); 
+            padding: 0.75rem; 
+            border-radius: 50%; 
+        }
+        
+        @media (min-width: 768px) { #sidebar-toggle { display: none; } }
+        
+        .sidebar-section { 
+            background-color: rgba(35, 45, 60, 0.8); 
+            border: 1px solid #5a4b3f; 
+            border-radius: 8px; 
+            padding: 1rem; 
+            margin-bottom: 1rem; 
+        }
+        
+        .sidebar-section h3 { 
+            font-family: 'Cinzel', serif; 
+            color: var(--accent-gold); 
+            font-size: 1.25rem; 
+            margin-bottom: 0.75rem; 
+        }
+
+        /* Vitality bars */
+        .hp-bar-bg { 
+            background-color: #440000; 
+            border: 1px solid var(--accent-red); 
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .hp-bar-fill { 
+            background: linear-gradient(90deg, var(--accent-red) 0%, #ff4444 100%);
+            transition: width 0.5s ease-in-out; 
+            border-radius: 10px;
+        }
+        
+        .mp-bar-bg { 
+            background-color: #000044; 
+            border: 1px solid var(--accent-blue); 
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .mp-bar-fill { 
+            background: linear-gradient(90deg, var(--accent-blue) 0%, #44aaff 100%);
+            transition: width 0.5s ease-in-out; 
+            border-radius: 10px;
+        }
+
+        .xp-bar-bg {
+            background-color: #224400;
+            border: 1px solid #44ff44;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .xp-bar-fill {
+            background: linear-gradient(90deg, #44ff44 0%, #88ff88 100%);
+            transition: width 0.5s ease-in-out;
+            border-radius: 10px;
+        }
+
+        .sidebar-list {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .sidebar-list li {
+            padding: 0.25rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-list li:last-child {
+            border-bottom: none;
+        }
+
+        /* Combat UI */
+        #combat-ui {
+            transition: all 0.3s ease;
+        }
+
+        .enemy-health-bar {
+            background: linear-gradient(90deg, #ff0000 0%, #ff4444 100%);
+            height: 20px;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .enemy-health-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            font-size: 0.8rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .combat-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .skills-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .skill-info {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem;
+            border-radius: 8px;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .floating-xp {
+            position: absolute;
+            color: #44ff44;
+            font-weight: bold;
+            animation: floatUp 1s ease-out forwards;
+        }
+
+        .floating-damage {
+            position: absolute;
+            color: #ff4444;
+            font-weight: bold;
+            animation: floatUp 1s ease-out forwards;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-50px); opacity: 0; }
+        }
+
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .spell-effect {
+            animation: spellGlow 0.5s ease-in-out;
+        }
+
+        @keyframes spellGlow {
+            0%, 100% { box-shadow: 0 0 5px rgba(138, 43, 226, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(138, 43, 226, 0.8); }
+        }
+
+        /* Character creation styling */
+        .class-option {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .class-option:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-gold);
+        }
+
+        .class-option.selected {
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+        }
+
+        .class-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .inventory-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .inventory-item:last-child {
+            border-bottom: none;
+        }
+
+        .use-item-btn {
+            background: var(--accent-gold);
+            color: var(--primary-dark);
+            border: none;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+
+        .use-item-btn:hover {
+            background: #b8941f;
+        }
+
+        /* Character creation compact layout */
+        .creation-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .creation-section-title {
+            font-family: 'Cinzel', serif;
+            color: var(--accent-gold);
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+            padding-bottom: 0.5rem;
+        }
+
+        .class-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+
+        .class-card {
+            background: rgba(42, 50, 69, 0.8);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .class-card:hover {
+            background: rgba(42, 50, 69, 1);
+            border-color: var(--accent-gold);
+            transform: translateY(-2px);
+        }
+
+        .class-card.selected {
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+            background: rgba(42, 50, 69, 1);
+        }
+
+        .class-icon-small {
+            font-size: 1.25rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .class-name {
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .class-desc {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            line-height: 1.2;
+        }
+
+        /* Skill tree styling */
+        .skill-tree {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .skill-node {
+            background: rgba(42, 50, 69, 0.8);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .skill-node.available {
+            cursor: pointer;
+            border-color: var(--accent-blue);
+        }
+
+        .skill-node.available:hover {
+            background: rgba(42, 50, 69, 1);
+            transform: translateY(-2px);
+        }
+
+        .skill-node.learned {
+            background: rgba(42, 50, 69, 1);
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 5px rgba(212, 175, 55, 0.5);
+        }
+
+        .skill-node.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .skill-level {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-top: 0.25rem;
+        }
+
+        /* Modal de habilidades */
+        #skills-modal {
+            z-index: 80;
+        }
+
+        .skill-modal-content {
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden">
+
+    <div class="flex flex-col h-full md:flex-row">
+
+        <aside id="sidebar" class="p-4 flex flex-col pt-16">
+            <h2 class="text-2xl font-bold text-center mb-6" style="font-family: 'Cinzel', serif; color: var(--accent-gold);">Detalhes da Aventura</h2>
+
+            <div class="sidebar-section">
+                <h3>Personagem</h3>
+                <p><strong>Nome:</strong> <span id="sidebar-char-name" class="text-yellow-300">-</span></p>
+                <p><strong>Classe:</strong> <span id="sidebar-char-role" class="text-white">-</span></p>
+                <p><strong>Nível:</strong> <span id="sidebar-char-level" class="text-green-400">1</span></p>
+                <p><strong>XP:</strong> <span id="sidebar-char-xp">0/100</span></p>
+                <div class="xp-bar-bg w-full h-2 rounded-full mt-1">
+                    <div id="xp-bar-fill" class="xp-bar-fill h-2 rounded-full" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Atributos</h3>
+                <div class="text-sm space-y-1" id="attributes-list">
+                    <div class="flex justify-between"><span>Força:</span><span id="attr-str">10</span></div>
+                    <div class="flex justify-between"><span>Destreza:</span><span id="attr-dex">10</span></div>
+                    <div class="flex justify-between"><span>Constituição:</span><span id="attr-con">10</span></div>
+                    <div class="flex justify-between"><span>Inteligência:</span><span id="attr-int">10</span></div>
+                    <div class="flex justify-between"><span>Sabedoria:</span><span id="attr-wis">10</span></div>
+                    <div class="flex justify-between"><span>Carisma:</span><span id="attr-cha">10</span></div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Vitalidade</h3>
+                <div class="space-y-3 mt-2">
+                    <div class="text-xs">
+                        <p class="flex justify-between items-center text-red-400"> 
+                            <span>HP</span>
+                            <span id="hp-value">100/100</span> 
+                        </p>
+                        <div class="hp-bar-bg w-full h-3 rounded-full mt-1"> 
+                            <div id="hp-bar-fill" class="hp-bar-fill h-3 rounded-full" style="width: 100%;"></div> 
+                        </div>
+                    </div>
+                    <div class="text-xs">
+                        <p class="flex justify-between items-center text-blue-400">
+                            <span>MP</span>
+                            <span id="mp-value">50/50</span> 
+                        </p>
+                        <div class="mp-bar-bg w-full h-3 rounded-full mt-1"> 
+                            <div id="mp-bar-fill" class="mp-bar-fill h-3 rounded-full" style="width: 100%;"></div> 
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-section"> 
+                <h3>Missões</h3> 
+                <ul id="quests-list" class="sidebar-list text-sm"> 
+                    <li class="text-gray-400 italic">Nenhuma missão ativa.</li>
+                </ul> 
+            </div>
+
+            <div class="sidebar-section"> 
+                <h3>Relacionamentos</h3> 
+                <ul id="relationships-list" class="sidebar-list text-sm"> 
+                    <li class="text-gray-400 italic">Nenhum NPC encontrado.</li>
+                </ul> 
+            </div>
+
+            <div class="sidebar-section"> 
+                <h3>Inventário</h3> 
+                <ul id="inventory-list" class="sidebar-list text-sm"> 
+                    <li class="text-gray-400 italic">Inventário vazio</li>
+                </ul> 
+            </div>
+
+            <div class="sidebar-section"> 
+                <h3>Habilidades</h3> 
+                <ul id="skills-list" class="sidebar-list text-sm"> 
+                    <li class="text-gray-400 italic">Nenhuma habilidade conhecida</li>
+                </ul> 
+            </div>
+        </aside>
+
+        <button id="sidebar-toggle">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"> 
+                <path fill-rule="evenodd" d="M3 6.75A.75.75 0 0 1 3.75 6h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 6.75ZM3 12a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 12Zm0 5.25a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75a.75.75 0 0 1 0-1.5Z" clip-rule="evenodd" /> 
+            </svg>
+        </button>
+
+        <div class="flex flex-col flex-grow p-4 md:p-8 h-full">
+            <header id="main-header" class="text-center mb-6 p-4 rounded-xl">
+                <h1 class="tracking-wider">RPG Textual: Mestre IA (Local)</h1>
+                <div class="text-xs mt-1 flex justify-center items-center space-x-2">
+                    <p>Jogador: <span id="character-name-display" class="font-bold">...</span></p>
+                    <button id="audio-toggle-button" class="px-3 py-1 rounded-md text-white font-semibold transition duration-200 text-xs bg-gray-700 hover:bg-gray-600">
+                        🎵 Tocar Música
+                    </button>
+                    <button id="reset-game-button" class="px-3 py-1 rounded-md text-white font-semibold transition duration-200 text-xs bg-red-700 hover:bg-red-600">
+                        🔄 Novo Jogo
+                    </button>
+                    <button id="save-game-button" class="px-3 py-1 rounded-md text-white font-semibold transition duration-200 text-xs bg-green-700 hover:bg-green-600">
+                        💾 Salvar
+                    </button>
+                    <button id="skills-modal-button" class="px-3 py-1 rounded-md text-white font-semibold transition duration-200 text-xs bg-purple-700 hover:bg-purple-600">
+                        🌳 Árvore de Habilidades
+                    </button>
+                </div>
+            </header>
+
+            <!-- Interface de Combate -->
+            <div id="combat-ui" class="hidden mb-4 p-4 rounded-xl bg-gray-800 border-2 border-red-600">
+                <div class="text-center mb-4">
+                    <h3 class="text-xl font-bold text-red-400 mb-2" id="enemy-name">Inimigo</h3>
+                    <div class="enemy-health-bar mx-auto max-w-md" id="enemy-health-bar" style="width: 100%;">
+                        <div class="enemy-health-text" id="enemy-health-text">HP: 100/100</div>
+                    </div>
+                    <p class="text-sm mt-1 text-gray-300" id="enemy-level">Nível: 1</p>
+                </div>
+                
+                <!-- Ataques Básicos -->
+                <div class="combat-actions">
+                    <button id="attack-btn" class="combat-button py-2 px-4 rounded-lg font-bold">
+                        ⚔️ Atacar
+                    </button>
+                    <button id="skill-btn" class="skill-button py-2 px-4 rounded-lg font-bold">
+                        🎯 Habilidades
+                    </button>
+                    <button id="defend-btn" class="bg-gray-600 text-white py-2 px-4 rounded-lg font-bold">
+                        🛡️ Defender
+                    </button>
+                    <button id="flee-btn" class="bg-yellow-600 text-white py-2 px-4 rounded-lg font-bold">
+                        🏃 Fugir
+                    </button>
+                </div>
+
+                <!-- Habilidades -->
+                <div class="mt-4 hidden" id="skills-section">
+                    <h4 class="text-lg font-bold text-purple-400 mb-2">🔮 Habilidades</h4>
+                    <div class="skills-grid" id="skills-grid">
+                        <!-- Habilidades serão adicionadas dinamicamente aqui -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal de Criação de Personagem Compacto -->
+            <div id="character-setup" class="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
+                <div class="modal-content p-6 rounded-xl max-w-2xl w-full">
+                    <div class="text-center mb-6">
+                        <h2 class="text-3xl font-bold mb-2" style="font-family: 'Cinzel', serif; color: var(--accent-gold);">Crie Seu Personagem</h2>
+                        <p class="text-lg text-gray-300">Comece sua jornada épica em Eldoria</p>
+                    </div>
+                    
+                    <div class="space-y-6">
+                        <!-- Nome do Personagem -->
+                        <div class="creation-section">
+                            <h3 class="creation-section-title">Nome do Personagem</h3>
+                            <div class="space-y-3">
+                                <input type="text" id="char-name-input" placeholder="Ex: Corvo, o Bardo" class="w-full p-3 rounded-lg bg-gray-800 text-white border border-gray-600">
+                                <p class="text-sm text-gray-400">Escolha um nome épico para seu herói</p>
+                                
+                                <div class="grid grid-cols-2 gap-3">
+                                    <input type="number" id="char-age-input" placeholder="Idade: Ex: 25" min="15" max="150" class="p-3 rounded-lg bg-gray-800 text-white border border-gray-600">
+                                    <select id="char-sex-input" class="p-3 rounded-lg bg-gray-800 text-white border border-gray-600">
+                                        <option value="">Sexo</option>
+                                        <option value="Masculino">Masculino</option>
+                                        <option value="Feminino">Feminino</option>
+                                        <option value="Não-binário">Não-binário</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Escolha da Classe -->
+                        <div class="creation-section">
+                            <h3 class="creation-section-title">Escolha sua Classe</h3>
+                            <div class="class-grid">
+                                <div class="class-card" data-class="Guerreiro">
+                                    <div class="class-icon-small">⚔️</div>
+                                    <div class="class-name">Guerreiro</div>
+                                    <div class="class-desc">Mestre do combate corpo a corpo</div>
+                                </div>
+                                <div class="class-card" data-class="Mago">
+                                    <div class="class-icon-small">🔮</div>
+                                    <div class="class-name">Mago</div>
+                                    <div class="class-desc">Mestre das artes arcanas</div>
+                                </div>
+                                <div class="class-card" data-class="Arqueiro">
+                                    <div class="class-icon-small">🏹</div>
+                                    <div class="class-name">Arqueiro</div>
+                                    <div class="class-desc">Especialista em ataques à distância</div>
+                                </div>
+                                <div class="class-card" data-class="Ladino">
+                                    <div class="class-icon-small">🗡️</div>
+                                    <div class="class-name">Ladino</div>
+                                    <div class="class-desc">Mestre da furtividade e precisão</div>
+                                </div>
+                                <div class="class-card" data-class="Paladino">
+                                    <div class="class-icon-small">🛡️</div>
+                                    <div class="class-name">Paladino</div>
+                                    <div class="class-desc">Cavaleiro sagrado com poderes divinos</div>
+                                </div>
+                                <div class="class-card" data-class="Bardo">
+                                    <div class="class-icon-small">🎵</div>
+                                    <div class="class-name">Bardo</div>
+                                    <div class="class-desc">Encantador com magia musical</div>
+                                </div>
+                                <div class="class-card" data-class="Druida">
+                                    <div class="class-icon-small">🌿</div>
+                                    <div class="class-name">Druida</div>
+                                    <div class="class-desc">Guardião da natureza e suas forças</div>
+                                </div>
+                                <div class="class-card" data-class="Necromante">
+                                    <div class="class-icon-small">💀</div>
+                                    <div class="class-name">Necromante</div>
+                                    <div class="class-desc">Mestre das artes das trevas</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t border-gray-600 mt-6 pt-4 text-center">
+                        <button id="save-character-button" class="w-full font-bold py-3 rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white text-lg">
+                            Começar Aventura!
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal de Árvore de Habilidades -->
+            <div id="skills-modal" class="fixed inset-0 bg-black bg-opacity-90 z-80 flex items-center justify-center p-4 hidden">
+                <div class="modal-content p-6 rounded-xl max-w-4xl w-full">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold" style="font-family: 'Cinzel', serif; color: var(--accent-gold);">Árvore de Habilidades</h2>
+                        <button id="close-skills-modal" class="text-white bg-red-600 hover:bg-red-700 rounded-full p-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="skill-modal-content">
+                        <div class="skill-tree" id="skill-tree">
+                            <!-- Árvore de habilidades será gerada aqui -->
+                        </div>
+                    </div>
+                    
+                    <div class="border-t border-gray-600 mt-6 pt-4 text-center">
+                        <p class="text-gray-400">Pontos de Habilidade Disponíveis: <span id="skill-points-available">0</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <main class="flex flex-col flex-grow min-h-0">
+                <div id="chat-area" class="flex-grow p-4 rounded-xl overflow-y-auto mb-4">
+                    <div class="text-center text-gray-500 italic">
+                        Crie seu personagem para começar a aventura...
+                    </div>
+                </div>
+            </main>
+
+            <section class="flex space-x-3 mt-2">
+                <input type="text" id="user-input" placeholder="Digite sua ação ou diálogo..." class="flex-grow p-4 rounded-xl bg-gray-800 text-white border border-gray-600" disabled>
+                <button id="send-button" class="font-bold py-3 px-6 rounded-xl bg-yellow-600 hover:bg-yellow-700 text-white" disabled>
+                    Enviar
+                </button>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        // Configurações da API
+        const GEMINI_API_KEY = "AIzaSyCgx2iLyDWAU1STUsbIkGlWH5FBmF8jqIQ";
+        const GEMINI_MODEL = 'gemini-2.0-flash';
+        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+        // Elementos DOM
+        const chatArea = document.getElementById('chat-area');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const characterSetupModal = document.getElementById('character-setup');
+        const saveCharacterButton = document.getElementById('save-character-button');
+        const charNameInput = document.getElementById('char-name-input');
+        const charAgeInput = document.getElementById('char-age-input');
+        const charSexInput = document.getElementById('char-sex-input');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const sidebar = document.getElementById('sidebar');
+        const audioToggleButton = document.getElementById('audio-toggle-button');
+        const resetGameButton = document.getElementById('reset-game-button');
+        const saveGameButton = document.getElementById('save-game-button');
+        const skillsModalButton = document.getElementById('skills-modal-button');
+        const skillsModal = document.getElementById('skills-modal');
+        const closeSkillsModal = document.getElementById('close-skills-modal');
+        const skillTree = document.getElementById('skill-tree');
+        const skillPointsAvailable = document.getElementById('skill-points-available');
+        const combatUI = document.getElementById('combat-ui');
+        const skillsGrid = document.getElementById('skills-grid');
+        const skillsSection = document.getElementById('skills-section');
+
+        // Elementos da Sidebar
+        const sidebarCharName = document.getElementById('sidebar-char-name');
+        const sidebarCharRole = document.getElementById('sidebar-char-role');
+        const sidebarCharLevel = document.getElementById('sidebar-char-level');
+        const sidebarCharXp = document.getElementById('sidebar-char-xp');
+        const xpBarFill = document.getElementById('xp-bar-fill');
+        const hpValue = document.getElementById('hp-value');
+        const hpBarFill = document.getElementById('hp-bar-fill');
+        const mpValue = document.getElementById('mp-value');
+        const mpBarFill = document.getElementById('mp-bar-fill');
+        const inventoryList = document.getElementById('inventory-list');
+        const skillsList = document.getElementById('skills-list');
+        const questsList = document.getElementById('quests-list');
+        const relationshipsList = document.getElementById('relationships-list');
+
+        // Elementos de Combate
+        const attackBtn = document.getElementById('attack-btn');
+        const skillBtn = document.getElementById('skill-btn');
+        const defendBtn = document.getElementById('defend-btn');
+        const fleeBtn = document.getElementById('flee-btn');
+        const enemyName = document.getElementById('enemy-name');
+        const enemyHealthBar = document.getElementById('enemy-health-bar');
+        const enemyHealthText = document.getElementById('enemy-health-text');
+        const enemyLevel = document.getElementById('enemy-level');
+
+        // Estado do jogo
+        let localCharacterProfile = null;
+        let chatMessages = [];
+        let isAudioPlaying = false;
+        let audioContext = null;
+        let currentEnemy = null;
+        let isInCombat = false;
+        let selectedClass = null;
+        let lastStoryContext = "";
+        let combatCooldown = false;
+
+        // Sistema de Habilidades com Árvore
+        const skillTrees = {
+            Guerreiro: {
+                basic: {
+                    id: "warrior_basic",
+                    name: "⚔️ Ataque Básico",
+                    description: "Um ataque simples com sua arma",
+                    level: 1,
+                    maxLevel: 5,
+                    cost: 0,
+                    requirements: [],
+                    type: "passive",
+                    effect: "Aumenta o dano do ataque básico em 5% por nível"
+                },
+                powerStrike: {
+                    id: "powerStrike",
+                    name: "⚔️ Golpe Poderoso",
+                    description: "Um golpe devastador que ignora parte da defesa do inimigo",
+                    level: 0,
+                    maxLevel: 3,
+                    cost: 1,
+                    requirements: ["warrior_basic"],
+                    type: "active",
+                    damage: "2d8+5",
+                    mpCost: 10
+                },
+                shieldBash: {
+                    id: "shieldBash",
+                    name: "🛡️ Golpe de Escudo",
+                    description: "Atordoa o inimigo, reduzindo sua chance de ataque",
+                    level: 0,
+                    maxLevel: 2,
+                    cost: 1,
+                    requirements: ["warrior_basic"],
+                    type: "active",
+                    damage: "1d6+3",
+                    mpCost: 8
+                },
+                berserker: {
+                    id: "berserker",
+                    name: "😠 Fúria Berserker",
+                    description: "Aumenta seu dano em troca de defesa",
+                    level: 0,
+                    maxLevel: 2,
+                    cost: 2,
+                    requirements: ["powerStrike"],
+                    type: "active",
+                    mpCost: 15
+                }
+            },
+            Mago: {
+                basic: {
+                    id: "mage_basic",
+                    name: "🔮 Magia Arcana",
+                    description: "Conhecimento básico das artes arcanas",
+                    level: 1,
+                    maxLevel: 5,
+                    cost: 0,
+                    requirements: [],
+                    type: "passive",
+                    effect: "Aumenta o dano de todas as magias em 5% por nível"
+                },
+                fireball: {
+                    id: "fireball",
+                    name: "🔥 Bola de Fogo",
+                    description: "Lança uma bola de fogo que causa dano em área",
+                    level: 0,
+                    maxLevel: 3,
+                    cost: 1,
+                    requirements: ["mage_basic"],
+                    type: "active",
+                    damage: "3d6",
+                    mpCost: 15
+                },
+                lightning: {
+                    id: "lightning",
+                    name: "⚡ Relâmpago",
+                    description: "Conjura um raio que atinge instantaneamente",
+                    level: 0,
+                    maxLevel: 3,
+                    cost: 1,
+                    requirements: ["mage_basic"],
+                    type: "active",
+                    damage: "2d8+3",
+                    mpCost: 12
+                },
+                frost: {
+                    id: "frost",
+                    name: "❄️ Nevasca",
+                    description: "Cria uma tempestade de gelo que reduz a velocidade do inimigo",
+                    level: 0,
+                    maxLevel: 2,
+                    cost: 1,
+                    requirements: ["mage_basic"],
+                    type: "active",
+                    damage: "2d6+2",
+                    mpCost: 10
+                },
+                arcaneMastery: {
+                    id: "arcaneMastery",
+                    name: "📚 Maestria Arcana",
+                    description: "Domínio total sobre as artes arcanas",
+                    level: 0,
+                    maxLevel: 1,
+                    cost: 3,
+                    requirements: ["fireball", "lightning", "frost"],
+                    type: "passive",
+                    effect: "Reduz o custo de MP de todas as magias em 20%"
+                }
+            },
+            Arqueiro: {
+                basic: {
+                    id: "archer_basic",
+                    name: "🏹 Tiro Preciso",
+                    description: "Habilidade básica com arco e flecha",
+                    level: 1,
+                    maxLevel: 5,
+                    cost: 0,
+                    requirements: [],
+                    type: "passive",
+                    effect: "Aumenta a precisão e dano com arcos em 5% por nível"
+                },
+                multiShot: {
+                    id: "multiShot",
+                    name: "🏹 Tiro Múltiplo",
+                    description: "Dispara múltiplas flechas de uma vez",
+                    level: 0,
+                    maxLevel: 3,
+                    cost: 1,
+                    requirements: ["archer_basic"],
+                    type: "active",
+                    damage: "1d8+2",
+                    mpCost: 12
+                },
+                poisonArrow: {
+                    id: "poisonArrow",
+                    name: "☠️ Flecha Envenenada",
+                    description: "Envenena o alvo causando dano contínuo",
+                    level: 0,
+                    maxLevel: 2,
+                    cost: 1,
+                    requirements: ["archer_basic"],
+                    type: "active",
+                    damage: "1d6",
+                    mpCost: 8
+                },
+                eagleEye: {
+                    id: "eagleEye",
+                    name: "🦅 Olho de Águia",
+                    description: "Aumenta drasticamente a precisão a longa distância",
+                    level: 0,
+                    maxLevel: 2,
+                    cost: 2,
+                    requirements: ["multiShot"],
+                    type: "passive",
+                    effect: "Dobra a chance de acerto crítico"
+                }
+            }
+            // Outras classes seguem o mesmo padrão...
+        };
+
+        // Sistema de Inimigos
+        const enemies = {
+            goblin: {
+                name: "Goblin",
+                level: 1,
+                hp: 30,
+                maxHp: 30,
+                damage: "1d6+2",
+                xp: 25,
+                description: "Um goblin pequeno e astuto com uma adega enferrujada"
+            },
+            wolf: {
+                name: "Lobo Selvagem",
+                level: 2,
+                hp: 45,
+                maxHp: 45,
+                damage: "1d8+3",
+                xp: 40,
+                description: "Um lobo faminto com olhos brilhantes"
+            },
+            skeleton: {
+                name: "Esqueleto Guerreiro",
+                level: 3,
+                hp: 60,
+                maxHp: 60,
+                damage: "1d10+4",
+                xp: 60,
+                description: "Um esqueleto armado com uma espada antiga"
+            },
+            bandit: {
+                name: "Bandido",
+                level: 2,
+                hp: 50,
+                maxHp: 50,
+                damage: "1d8+2",
+                xp: 45,
+                description: "Um bandido humano com intenções sinistras"
+            }
+        };
+
+        // Sistema de música
+        function startAmbiance() {
+            if (isAudioPlaying) {
+                if (audioContext) {
+                    audioContext.close();
+                    audioContext = null;
+                }
+                isAudioPlaying = false;
+                audioToggleButton.textContent = '🎵 Tocar Música';
+                return;
+            }
+
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(330, audioContext.currentTime);
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                
+                oscillator.start();
+                isAudioPlaying = true;
+                audioToggleButton.textContent = '⏸️ Parar Música';
+                
+                let noteIndex = 0;
+                const notes = [330, 392, 440, 523, 494, 440, 392, 349];
+                
+                setInterval(() => {
+                    if (isAudioPlaying && audioContext) {
+                        oscillator.frequency.setValueAtTime(notes[noteIndex], audioContext.currentTime);
+                        noteIndex = (noteIndex + 1) % notes.length;
+                    }
+                }, 500);
+                
+            } catch (error) {
+                console.error('Erro ao iniciar áudio:', error);
+            }
+        }
+
+        // Dados iniciais das classes com atributos
+        function getInitialClassData(role) {
+            const data = {
+                Guerreiro: {
+                    hp: 150, mp: 20,
+                    inventory: ["Espada Longa", "Escudo de Madeira", "Armadura de Couro", "Poção de Cura"],
+                    skills: ["Golpe Poderoso", "Defesa Elevada"],
+                    skillPoints: 1,
+                    skillTree: "Guerreiro",
+                    attributes: { str: 16, dex: 12, con: 14, int: 8, wis: 10, cha: 10 }
+                },
+                Mago: {
+                    hp: 80, mp: 120,
+                    inventory: ["Cajado Arcano", "Livro de Feitiços", "Poção de Mana", "Poção de Cura"],
+                    skills: ["Bola de Fogo", "Escudo Mágico"],
+                    skillPoints: 1,
+                    skillTree: "Mago",
+                    attributes: { str: 8, dex: 10, con: 12, int: 16, wis: 14, cha: 10 }
+                },
+                Arqueiro: {
+                    hp: 100, mp: 50,
+                    inventory: ["Arco Longo", "Aljava com 20 Flechas", "Armadura Leve", "Poção de Cura"],
+                    skills: ["Tiro Preciso", "Furtividade"],
+                    skillPoints: 1,
+                    skillTree: "Arqueiro",
+                    attributes: { str: 12, dex: 16, con: 12, int: 10, wis: 12, cha: 8 }
+                },
+                Ladino: {
+                    hp: 110, mp: 40,
+                    inventory: ["Adagas Duplas", "Kit de Ladrão", "Capuz da Sombra", "Poção de Cura"],
+                    skills: ["Ataque Furtivo", "Fechadura"],
+                    skillPoints: 1,
+                    skillTree: "Ladino",
+                    attributes: { str: 10, dex: 16, con: 12, int: 12, wis: 10, cha: 10 }
+                },
+                Paladino: {
+                    hp: 140, mp: 70,
+                    inventory: ["Martelo Sagrado", "Armadura Pesada", "Símbolo Divino", "Poção de Cura"],
+                    skills: ["Cura Divina", "Golpe Sagrado"],
+                    skillPoints: 1,
+                    skillTree: "Paladino",
+                    attributes: { str: 14, dex: 10, con: 14, int: 8, wis: 12, cha: 12 }
+                },
+                Bardo: {
+                    hp: 100, mp: 60,
+                    inventory: ["Alaúde", "Diário de Canções", "Vestes Coloridas", "Poção de Cura"],
+                    skills: ["Canção de Inspiração", "Encantar"],
+                    skillPoints: 1,
+                    skillTree: "Bardo",
+                    attributes: { str: 8, dex: 12, con: 10, int: 12, wis: 10, cha: 16 }
+                },
+                Druida: {
+                    hp: 120, mp: 80,
+                    inventory: ["Cajado de Carvalho", "Saco de Ervas", "Amuleto Natural", "Poção de Cura"],
+                    skills: ["Forma Animal", "Cura da Natureza"],
+                    skillPoints: 1,
+                    skillTree: "Druida",
+                    attributes: { str: 10, dex: 10, con: 12, int: 12, wis: 16, cha: 10 }
+                },
+                Necromante: {
+                    hp: 90, mp: 110,
+                    inventory: ["Cajado de Ossos", "Pó de Ânima", "Tomo Proibido", "Poção de Cura"],
+                    skills: ["Invocar Esqueleto", "Drenar Vida"],
+                    skillPoints: 1,
+                    skillTree: "Necromante",
+                    attributes: { str: 8, dex: 10, con: 12, int: 16, wis: 12, cha: 12 }
+                }
+            };
+            
+            return data[role] || {
+                hp: 100, mp: 50,
+                inventory: ["Arma Básica", "Poção de Cura"],
+                skills: ["Habilidade Básica"],
+                skillPoints: 1,
+                skillTree: "Guerreiro",
+                attributes: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 }
+            };
+        }
+
+        // Atualizar toda a sidebar
+        function updateAllSidebarUI(profile) {
+            if (!profile) return;
+            
+            // Informações básicas
+            sidebarCharName.textContent = profile.name;
+            sidebarCharRole.textContent = profile.role;
+            sidebarCharLevel.textContent = profile.level || 1;
+            sidebarCharXp.textContent = `${profile.xp || 0}/${getXpForNextLevel(profile.level || 1)}`;
+            xpBarFill.style.width = `${((profile.xp || 0) / getXpForNextLevel(profile.level || 1)) * 100}%`;
+            
+            // Atributos
+            document.getElementById('attr-str').textContent = profile.attributes.str;
+            document.getElementById('attr-dex').textContent = profile.attributes.dex;
+            document.getElementById('attr-con').textContent = profile.attributes.con;
+            document.getElementById('attr-int').textContent = profile.attributes.int;
+            document.getElementById('attr-wis').textContent = profile.attributes.wis;
+            document.getElementById('attr-cha').textContent = profile.attributes.cha;
+            
+            // Vitalidade
+            hpValue.textContent = `${profile.currentHP}/${profile.maxHP}`;
+            mpValue.textContent = `${profile.currentMP}/${profile.maxMP}`;
+            hpBarFill.style.width = `${(profile.currentHP / profile.maxHP) * 100}%`;
+            mpBarFill.style.width = `${(profile.currentMP / profile.maxMP) * 100}%`;
+            
+            // Inventário e Habilidades
+            updateInventoryUI(profile.inventory);
+            updateSkillsUI(profile.learnedSkills || []);
+            
+            // Inicialmente vazio
+            updateQuestsUI([]);
+            updateRelationshipsUI([]);
+            
+            // Atualizar pontos de habilidade
+            skillPointsAvailable.textContent = profile.skillPoints || 0;
+        }
+
+        // XP necessário para próximo nível
+        function getXpForNextLevel(level) {
+            return level * 100;
+        }
+
+        // Ganhar XP
+        function gainXP(amount) {
+            if (!localCharacterProfile) return;
+            
+            localCharacterProfile.xp = (localCharacterProfile.xp || 0) + amount;
+            const xpForNextLevel = getXpForNextLevel(localCharacterProfile.level || 1);
+            
+            // Mostrar flutuante de XP
+            showFloatingText(`+${amount} XP`, '#44ff44');
+            
+            // Verificar level up
+            if (localCharacterProfile.xp >= xpForNextLevel) {
+                levelUp();
+            }
+            
+            updateAllSidebarUI(localCharacterProfile);
+        }
+
+        // Subir de nível
+        function levelUp() {
+            if (!localCharacterProfile) return;
+            
+            localCharacterProfile.level = (localCharacterProfile.level || 1) + 1;
+            localCharacterProfile.xp = 0;
+            
+            // Ganhar pontos de habilidade
+            localCharacterProfile.skillPoints = (localCharacterProfile.skillPoints || 0) + 1;
+            
+            // Melhorar atributos baseado na classe
+            const classBonuses = {
+                Guerreiro: { str: 2, con: 1 },
+                Mago: { int: 2, wis: 1 },
+                Arqueiro: { dex: 2, str: 1 },
+                Ladino: { dex: 2, int: 1 },
+                Paladino: { str: 1, con: 1, cha: 1 },
+                Bardo: { cha: 2, dex: 1 },
+                Druida: { wis: 2, con: 1 },
+                Necromante: { int: 2, con: 1 }
+            };
+            
+            const bonuses = classBonuses[localCharacterProfile.role] || { str: 1, dex: 1 };
+            Object.keys(bonuses).forEach(attr => {
+                localCharacterProfile.attributes[attr] += bonuses[attr];
+            });
+            
+            // Aumentar HP e MP
+            localCharacterProfile.maxHP += 10;
+            localCharacterProfile.currentHP = localCharacterProfile.maxHP;
+            localCharacterProfile.maxMP += 5;
+            localCharacterProfile.currentMP = localCharacterProfile.maxMP;
+            
+            // Mensagem de level up
+            addMessage(`🎉 **LEVEL UP!** Você atingiu o nível ${localCharacterProfile.level}! Atributos melhorados e ganhou 1 ponto de habilidade!`, 'ai', 'level-up');
+            
+            updateAllSidebarUI(localCharacterProfile);
+            updateSkillTreeUI();
+        }
+
+        // Texto flutuante
+        function showFloatingText(text, color) {
+            const floatingText = document.createElement('div');
+            floatingText.className = 'floating-xp';
+            floatingText.textContent = text;
+            floatingText.style.color = color;
+            floatingText.style.left = '50%';
+            floatingText.style.top = '50%';
+            
+            document.body.appendChild(floatingText);
+            
+            setTimeout(() => {
+                document.body.removeChild(floatingText);
+            }, 1000);
+        }
+
+        // Funções de atualização específicas
+        function updateInventoryUI(inventory) {
+            inventoryList.innerHTML = '';
+            if (inventory && inventory.length > 0) {
+                inventory.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'inventory-item';
+                    
+                    const itemName = document.createElement('span');
+                    itemName.textContent = item;
+                    itemName.className = 'text-white';
+                    
+                    const useButton = document.createElement('button');
+                    useButton.textContent = 'Usar';
+                    useButton.className = 'use-item-btn';
+                    useButton.addEventListener('click', () => useItem(item));
+                    
+                    li.appendChild(itemName);
+                    
+                    // Só adiciona botão de usar para itens que podem ser usados
+                    if (item.includes('Poção')) {
+                        li.appendChild(useButton);
+                    }
+                    
+                    inventoryList.appendChild(li);
+                });
+            } else {
+                const li = document.createElement('li');
+                li.textContent = 'Inventário vazio';
+                li.className = 'text-gray-400 italic';
+                inventoryList.appendChild(li);
+            }
+        }
+
+        // Usar item do inventário
+        function useItem(item) {
+            if (!localCharacterProfile) return;
+            
+            if (item.includes('Poção de Cura')) {
+                const healAmount = 30;
+                localCharacterProfile.currentHP = Math.min(localCharacterProfile.maxHP, localCharacterProfile.currentHP + healAmount);
+                addMessage(`💖 Você usou uma **${item}** e recuperou **${healAmount}** de HP!`, 'ai', 'spell');
+                
+                // Remover do inventário
+                const itemIndex = localCharacterProfile.inventory.indexOf(item);
+                if (itemIndex !== -1) {
+                    localCharacterProfile.inventory.splice(itemIndex, 1);
+                }
+                
+                updateAllSidebarUI(localCharacterProfile);
+            } else if (item.includes('Poção de Mana')) {
+                const manaAmount = 25;
+                localCharacterProfile.currentMP = Math.min(localCharacterProfile.maxMP, localCharacterProfile.currentMP + manaAmount);
+                addMessage(`🔵 Você usou uma **${item}** e recuperou **${manaAmount}** de MP!`, 'ai', 'spell');
+                
+                // Remover do inventário
+                const itemIndex = localCharacterProfile.inventory.indexOf(item);
+                if (itemIndex !== -1) {
+                    localCharacterProfile.inventory.splice(itemIndex, 1);
+                }
+                
+                updateAllSidebarUI(localCharacterProfile);
+            }
+        }
+
+        function updateSkillsUI(learnedSkills) {
+            skillsList.innerHTML = '';
+            if (learnedSkills && learnedSkills.length > 0) {
+                learnedSkills.forEach(skillId => {
+                    const skill = getSkillById(skillId);
+                    if (!skill) return;
+                    
+                    const li = document.createElement('li');
+                    li.textContent = `${skill.name} (Nv. ${skill.level})`;
+                    li.className = 'text-green-400';
+                    skillsList.appendChild(li);
+                });
+            } else {
+                const li = document.createElement('li');
+                li.textContent = 'Nenhuma habilidade conhecida';
+                li.className = 'text-gray-400 italic';
+                skillsList.appendChild(li);
+            }
+        }
+
+        function updateQuestsUI(quests) {
+            questsList.innerHTML = '';
+            if (quests && quests.length > 0) {
+                quests.forEach(quest => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span class="text-yellow-400">${quest.title}</span> <span class="text-gray-400 text-xs">(${quest.status})</span>`;
+                    questsList.appendChild(li);
+                });
+            } else {
+                const li = document.createElement('li');
+                li.textContent = 'Nenhuma missão ativa';
+                li.className = 'text-gray-400 italic';
+                questsList.appendChild(li);
+            }
+        }
+
+        function updateRelationshipsUI(relationships) {
+            relationshipsList.innerHTML = '';
+            if (relationships && relationships.length > 0) {
+                relationships.forEach(rel => {
+                    const li = document.createElement('li');
+                    let emoji = '👤';
+                    if (rel.status === 'Amigável') emoji = '😊';
+                    if (rel.status === 'Hostil') emoji = '😠';
+                    if (rel.status === 'Neutro') emoji = '😐';
+                    
+                    li.innerHTML = `${emoji} <span class="text-white">${rel.name}</span> <span class="text-gray-400 text-xs">(${rel.status})</span>`;
+                    relationshipsList.appendChild(li);
+                });
+            } else {
+                const li = document.createElement('li');
+                li.textContent = 'Nenhum NPC encontrado';
+                li.className = 'text-gray-400 italic';
+                relationshipsList.appendChild(li);
+            }
+        }
+
+        // Sistema de Árvore de Habilidades
+        function getSkillById(skillId) {
+            if (!localCharacterProfile || !localCharacterProfile.skillTree) return null;
+            
+            const tree = skillTrees[localCharacterProfile.skillTree];
+            if (!tree) return null;
+            
+            return tree[skillId];
+        }
+
+        function updateSkillTreeUI() {
+            if (!localCharacterProfile) return;
+            
+            skillTree.innerHTML = '';
+            const tree = skillTrees[localCharacterProfile.skillTree];
+            if (!tree) return;
+            
+            Object.keys(tree).forEach(skillKey => {
+                const skill = tree[skillKey];
+                const skillNode = document.createElement('div');
+                
+                let nodeClass = 'skill-node';
+                let canLearn = false;
+                
+                // Verificar se a habilidade pode ser aprendida
+                if (skill.level < skill.maxLevel) {
+                    const requirementsMet = skill.requirements.every(req => {
+                        const reqSkill = tree[req];
+                        return reqSkill && reqSkill.level > 0;
+                    });
+                    
+                    if (requirementsMet && (localCharacterProfile.skillPoints || 0) >= skill.cost) {
+                        nodeClass += ' available';
+                        canLearn = true;
+                    } else if (skill.level > 0) {
+                        nodeClass += ' learned';
+                    } else {
+                        nodeClass += ' locked';
+                    }
+                } else if (skill.level > 0) {
+                    nodeClass += ' learned';
+                } else {
+                    nodeClass += ' locked';
+                }
+                
+                skillNode.className = nodeClass;
+                skillNode.innerHTML = `
+                    <div class="font-bold">${skill.name}</div>
+                    <div class="text-xs text-gray-400">${skill.description}</div>
+                    <div class="skill-level">Nível ${skill.level}/${skill.maxLevel}</div>
+                    ${skill.level < skill.maxLevel ? `<div class="text-xs mt-1">Custo: ${skill.cost} ponto(s)</div>` : ''}
+                `;
+                
+                if (canLearn) {
+                    skillNode.addEventListener('click', () => learnSkill(skillKey));
+                }
+                
+                skillTree.appendChild(skillNode);
+            });
+            
+            skillPointsAvailable.textContent = localCharacterProfile.skillPoints || 0;
+        }
+
+        function learnSkill(skillId) {
+            if (!localCharacterProfile) return;
+            
+            const tree = skillTrees[localCharacterProfile.skillTree];
+            if (!tree) return;
+            
+            const skill = tree[skillId];
+            if (!skill) return;
+            
+            // Verificar requisitos
+            const requirementsMet = skill.requirements.every(req => {
+                const reqSkill = tree[req];
+                return reqSkill && reqSkill.level > 0;
+            });
+            
+            if (!requirementsMet) {
+                addMessage("❌ **REQUISITOS NÃO ATENDIDOS!** Você precisa aprender as habilidades anteriores primeiro.", 'ai');
+                return;
+            }
+            
+            // Verificar pontos
+            if ((localCharacterProfile.skillPoints || 0) < skill.cost) {
+                addMessage("❌ **PONTOS INSUFICIENTES!** Você não tem pontos de habilidade suficientes.", 'ai');
+                return;
+            }
+            
+            // Aprender habilidade
+            skill.level++;
+            localCharacterProfile.skillPoints -= skill.cost;
+            
+            // Adicionar à lista de habilidades aprendidas
+            if (!localCharacterProfile.learnedSkills) {
+                localCharacterProfile.learnedSkills = [];
+            }
+            
+            if (!localCharacterProfile.learnedSkills.includes(skillId)) {
+                localCharacterProfile.learnedSkills.push(skillId);
+            }
+            
+            addMessage(`✨ **HABILIDADE APRENDIDA!** Você aprendeu ${skill.name} (Nível ${skill.level})!`, 'ai', 'level-up');
+            
+            updateAllSidebarUI(localCharacterProfile);
+            updateSkillTreeUI();
+            combatSystem.updateSkillsUI();
+        }
+
+        // Sistema de Combate
+        const combatSystem = {
+            startCombat: function(enemyType) {
+                // Verificar se já está em combate ou em cooldown
+                if (isInCombat || combatCooldown) return;
+                
+                currentEnemy = JSON.parse(JSON.stringify(enemies[enemyType]));
+                isInCombat = true;
+                combatCooldown = true;
+                
+                // Resetar cooldown após 5 segundos
+                setTimeout(() => {
+                    combatCooldown = false;
+                }, 5000);
+                
+                // Mostrar UI de combate
+                combatUI.classList.remove('hidden');
+                enemyName.textContent = currentEnemy.name;
+                enemyLevel.textContent = `Nível: ${currentEnemy.level}`;
+                this.updateEnemyHealth();
+                
+                // Atualizar habilidades disponíveis
+                this.updateSkillsUI();
+                
+                addMessage(`⚔️ **ENCONTRO DE COMBATE!** Um ${currentEnemy.name} apareceu!`, 'ai', 'combat');
+                addMessage(currentEnemy.description, 'ai', 'combat');
+            },
+            
+            updateEnemyHealth: function() {
+                const healthPercent = (currentEnemy.hp / currentEnemy.maxHp) * 100;
+                enemyHealthBar.style.width = `${healthPercent}%`;
+                enemyHealthText.textContent = `HP: ${currentEnemy.hp}/${currentEnemy.maxHp}`;
+                
+                // Mudar cor baseado na vida
+                if (healthPercent > 70) {
+                    enemyHealthBar.style.background = 'linear-gradient(90deg, #44ff44 0%, #88ff88 100%)';
+                } else if (healthPercent > 30) {
+                    enemyHealthBar.style.background = 'linear-gradient(90deg, #ffff44 0%, #ffff88 100%)';
+                } else {
+                    enemyHealthBar.style.background = 'linear-gradient(90deg, #ff4444 0%, #ff8888 100%)';
+                }
+            },
+            
+            updateSkillsUI: function() {
+                skillsGrid.innerHTML = '';
+                
+                if (!localCharacterProfile || !localCharacterProfile.learnedSkills) return;
+                
+                let hasActiveSkills = false;
+                
+                localCharacterProfile.learnedSkills.forEach(skillId => {
+                    const skill = getSkillById(skillId);
+                    if (!skill || skill.type !== 'active') return;
+                    
+                    hasActiveSkills = true;
+                    
+                    const skillButton = document.createElement('button');
+                    skillButton.className = 'spell-button py-2 px-4 rounded-lg font-bold text-sm';
+                    skillButton.innerHTML = `
+                        ${skill.name} (Nv. ${skill.level})
+                        <div class="skill-info">
+                            <div>Custo: ${skill.mpCost} MP</div>
+                            <div class="text-xs">${skill.description}</div>
+                        </div>
+                    `;
+                    
+                    skillButton.addEventListener('click', () => {
+                        this.useSkill(skillId);
+                    });
+                    
+                    // Desabilitar se não tiver MP suficiente
+                    if (localCharacterProfile.currentMP < skill.mpCost) {
+                        skillButton.disabled = true;
+                        skillButton.classList.add('opacity-50');
+                    }
+                    
+                    skillsGrid.appendChild(skillButton);
+                });
+                
+                // Mostrar/ocultar seção de habilidades
+                if (hasActiveSkills) {
+                    skillsSection.classList.remove('hidden');
+                } else {
+                    skillsSection.classList.add('hidden');
+                }
+            },
+            
+            playerAttack: function() {
+                if (!isInCombat || !currentEnemy) return;
+                
+                // Calcular dano baseado na força
+                const baseDamage = Math.floor(Math.random() * 6) + 1; // 1d6
+                const strBonus = Math.floor((localCharacterProfile.attributes.str - 10) / 2);
+                const totalDamage = Math.max(1, baseDamage + strBonus);
+                
+                currentEnemy.hp -= totalDamage;
+                this.updateEnemyHealth();
+                
+                addMessage(`💥 Você ataca o ${currentEnemy.name} causando **${totalDamage}** de dano!`, 'ai', 'combat');
+                showFloatingText(`-${totalDamage}`, '#ff4444');
+                
+                if (currentEnemy.hp <= 0) {
+                    this.victory();
+                } else {
+                    this.enemyTurn();
+                }
+            },
+            
+            useSkill: function(skillId) {
+                if (!isInCombat || !currentEnemy) return;
+                
+                const skill = getSkillById(skillId);
+                if (!skill || skill.type !== 'active') return;
+                
+                // Verificar MP
+                if (localCharacterProfile.currentMP < skill.mpCost) {
+                    addMessage(`❌ **MP INSUFICIENTE!** Você não tem MP suficiente para usar ${skill.name}.`, 'ai', 'combat');
+                    return;
+                }
+                
+                // Gastar MP
+                localCharacterProfile.currentMP -= skill.mpCost;
+                updateAllSidebarUI(localCharacterProfile);
+                
+                // Efeito visual
+                skillsGrid.classList.add('spell-effect');
+                setTimeout(() => skillsGrid.classList.remove('spell-effect'), 500);
+                
+                let message = '';
+                
+                // Calcular dano baseado no nível da habilidade
+                const damageMultiplier = 1 + (skill.level - 1) * 0.2; // 20% mais dano por nível
+                const baseDamage = this.rollDice(skill.damage);
+                const totalDamage = Math.floor(baseDamage * damageMultiplier);
+                
+                currentEnemy.hp -= totalDamage;
+                this.updateEnemyHealth();
+                
+                message = `🔮 Você usa **${skill.name} (Nv. ${skill.level})** no ${currentEnemy.name} causando **${totalDamage}** de dano!`;
+                showFloatingText(`-${totalDamage}`, '#ff4444');
+                
+                addMessage(message, 'ai', 'spell');
+                
+                if (currentEnemy.hp <= 0) {
+                    this.victory();
+                } else {
+                    this.enemyTurn();
+                }
+                
+                // Atualizar botões de habilidades
+                this.updateSkillsUI();
+            },
+            
+            enemyTurn: function() {
+                // Calcular dano do inimigo
+                const damageRoll = currentEnemy.damage;
+                const damage = this.rollDice(damageRoll);
+                
+                localCharacterProfile.currentHP = Math.max(0, localCharacterProfile.currentHP - damage);
+                updateAllSidebarUI(localCharacterProfile);
+                
+                addMessage(`👹 O ${currentEnemy.name} ataca você causando **${damage}** de dano!`, 'ai', 'combat');
+                
+                // Efeito visual
+                chatArea.classList.add('shake');
+                setTimeout(() => chatArea.classList.remove('shake'), 500);
+                
+                if (localCharacterProfile.currentHP <= 0) {
+                    this.defeat();
+                }
+            },
+            
+            rollDice: function(diceString) {
+                // Simples parser de dados como "1d6+2"
+                const match = diceString.match(/(\d+)d(\d+)\+?(\d+)?/);
+                if (!match) return 0;
+                
+                const numDice = parseInt(match[1]);
+                const diceSides = parseInt(match[2]);
+                const bonus = match[3] ? parseInt(match[3]) : 0;
+                
+                let total = 0;
+                for (let i = 0; i < numDice; i++) {
+                    total += Math.floor(Math.random() * diceSides) + 1;
+                }
+                
+                return total + bonus;
+            },
+            
+            victory: function() {
+                addMessage(`🎉 **VITÓRIA!** Você derrotou o ${currentEnemy.name}!`, 'ai', 'combat');
+                gainXP(currentEnemy.xp);
+                
+                // Chance de drop de item
+                if (Math.random() < 0.3) {
+                    const drops = ["Poção de Cura", "Elmo Simples", "Moedas de Ouro", "Poção de Mana"];
+                    const drop = drops[Math.floor(Math.random() * drops.length)];
+                    localCharacterProfile.inventory.push(drop);
+                    addMessage(`📦 Você encontrou: **${drop}**`, 'ai', 'combat');
+                    updateInventoryUI(localCharacterProfile.inventory);
+                }
+                
+                this.endCombat();
+                
+                // Continuar a história após o combate
+                setTimeout(() => {
+                    continueStoryAfterCombat();
+                }, 2000);
+            },
+            
+            defeat: function() {
+                addMessage(`💀 **DERROTA!** Você foi derrotado pelo ${currentEnemy.name}...`, 'ai', 'combat');
+                addMessage("Você acorda em um santuário próximo, mas perdeu alguns itens...", 'ai', 'combat');
+                
+                // Perder alguns itens
+                if (localCharacterProfile.inventory.length > 3) {
+                    const lostItem = localCharacterProfile.inventory.pop();
+                    addMessage(`💸 Você perdeu: **${lostItem}**`, 'ai', 'combat');
+                }
+                
+                // Restaurar um pouco de HP e MP
+                localCharacterProfile.currentHP = Math.floor(localCharacterProfile.maxHP * 0.3);
+                localCharacterProfile.currentMP = Math.floor(localCharacterProfile.maxMP * 0.5);
+                updateAllSidebarUI(localCharacterProfile);
+                
+                this.endCombat();
+                
+                // Continuar a história após a derrota
+                setTimeout(() => {
+                    continueStoryAfterDefeat();
+                }, 2000);
+            },
+            
+            flee: function() {
+                if (Math.random() < 0.7) { // 70% chance de fugir
+                    addMessage("🏃 **FUGA BEM-SUCEDIDA!** Você conseguiu escapar do combate.", 'ai', 'combat');
+                    this.endCombat();
+                    
+                    // Continuar a história após a fuga
+                    setTimeout(() => {
+                        continueStoryAfterFlee();
+                    }, 2000);
+                } else {
+                    addMessage("❌ **FUGA FALHOU!** O inimigo te alcança!", 'ai', 'combat');
+                    this.enemyTurn();
+                }
+            },
+            
+            endCombat: function() {
+                isInCombat = false;
+                currentEnemy = null;
+                combatUI.classList.add('hidden');
+                skillsSection.classList.add('hidden');
+            }
+        };
+
+        // Continuar a história após o combate
+        function continueStoryAfterCombat() {
+            const prompts = [
+                `Após derrotar o ${currentEnemy ? currentEnemy.name : 'inimigo'}, ${localCharacterProfile.name} se encontra em uma encruzilhada. Para a esquerda, um caminho leva a uma floresta densa e misteriosa. Para a direita, uma estrada bem mantida segue em direção a uma vila distante. O que você faz?`,
+                `Com o ${currentEnemy ? currentEnemy.name : 'inimigo'} derrotado, ${localCharacterProfile.name} nota algo brilhando entre os restos do combate. É um pequeno amuleto com inscrições antigas. Enquanto examina o objeto, ouve passos se aproximando. O que você faz?`,
+                `A batalha terminou, e ${localCharacterProfile.name} pode finalmente respirar aliviado. O som de um riacho próximo chama sua atenção. A água parece cristalina e refrescante. No horizonte, as torres de uma cidade fortificada são visíveis. O que você faz agora?`
+            ];
+            
+            const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+            addMessage(randomPrompt, 'ai');
+            lastStoryContext = randomPrompt;
+        }
+
+        function continueStoryAfterDefeat() {
+            const prompts = [
+                `Machucado e cansado, ${localCharacterProfile.name} acorda em um pequeno santuário. Um curandeiro gentil cuida de seus ferimentos. "Você teve sorte de ser encontrado", ele diz. "Essas terras estão perigosas ultimamente." O que você faz?`,
+                `Consciente novamente, ${localCharacterProfile.name} se encontra em uma taverna aconchegante. O dono do lugar explica que mercenários o trouxeram até aqui. "Você perdeu alguns pertences, mas pelo menos está vivo", ele comenta. O que você faz agora?`
+            ];
+            
+            const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+            addMessage(randomPrompt, 'ai');
+            lastStoryContext = randomPrompt;
+        }
+
+        function continueStoryAfterFlee() {
+            const prompts = [
+                `Ofegante e com o coração acelerado, ${localCharacterProfile.name} finalmente para de correr. Você está em segurança, pelo menos por enquanto. O som do ${currentEnemy ? currentEnemy.name : 'inimigo'} já não é mais audível. O que você faz agora?`,
+                `Após uma fuga precipitada, ${localCharacterProfile.name} se esconde em uma caverna próxima. A escuridão é reconfortante, mas você sabe que não pode ficar aqui para sempre. O que você planeja fazer?`
+            ];
+            
+            const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+            addMessage(randomPrompt, 'ai');
+            lastStoryContext = randomPrompt;
+        }
+
+        // Criar personagem
+        function saveCharacterProfile() {
+            const name = charNameInput.value.trim();
+            const age = charAgeInput.value;
+            const sex = charSexInput.value;
+            const role = selectedClass;
+            
+            if (!name || !age || !sex || !role) {
+                alert('Por favor, preencha todos os campos!');
+                return;
+            }
+            
+            const classData = getInitialClassData(role);
+            
+            localCharacterProfile = {
+                name: name,
+                age: age,
+                sex: sex,
+                role: role,
+                level: 1,
+                xp: 0,
+                maxHP: classData.hp,
+                currentHP: classData.hp,
+                maxMP: classData.mp,
+                currentMP: classData.mp,
+                inventory: classData.inventory,
+                skills: classData.skills,
+                skillPoints: classData.skillPoints,
+                skillTree: classData.skillTree,
+                learnedSkills: ['basic'],
+                attributes: classData.attributes,
+                quests: [],
+                relationships: []
+            };
+            
+            // Fechar modal e atualizar UI
+            characterSetupModal.style.display = 'none';
+            document.getElementById('character-name-display').textContent = `${name} (${role})`;
+            updateAllSidebarUI(localCharacterProfile);
+            
+            // Habilitar chat
+            userInput.disabled = false;
+            sendButton.disabled = false;
+            
+            // Gerar história inicial com a IA
+            generateInitialStory();
+        }
+
+        // Gerar história inicial com a IA
+        async function generateInitialStory() {
+            const prompt = `
+Como Mestre de RPG, crie uma introdução envolvente para ${localCharacterProfile.name}, um ${localCharacterProfile.role} ${localCharacterProfile.sex.toLowerCase()} de ${localCharacterProfile.age} anos no mundo de Eldoria.
+
+A introdução deve:
+1. Estabelecer o cenário de Eldoria - um mundo de fantasia com reinos em conflito, magia ancestral e perigos iminentes
+2. Introduzir pelo menos UM NPC relevante com nome e personalidade
+3. Estabelecer UMA missão clara e motivadora relacionada ao equilíbrio do mundo
+4. Ser escrita em português, no estilo de RPGs clássicos
+5. Terminar perguntando o que o jogador quer fazer
+
+MISSÃO PRINCIPAL: Encontrar e proteger os "Fragmentos da Estrela Cadente", artefatos antigos que mantêm o equilíbrio mágico de Eldoria.
+
+Mantenha a resposta entre 200-250 palavras. Não inclua markdown.
+            `;
+
+            try {
+                addMessage("📖 O Mestre IA está criando sua história inicial...", 'ai');
+                
+                const response = await fetch(GEMINI_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: prompt
+                            }]
+                        }]
+                    })
+                });
+
+                const data = await response.json();
+                const storyText = data.candidates[0].content.parts[0].text;
+                
+                // Adicionar a história ao chat
+                addMessage(storyText, 'ai');
+                
+                // Extrair e atualizar missões e relacionamentos da história
+                updateFromStory(storyText);
+                
+                // Definir contexto da história
+                lastStoryContext = storyText;
+                
+            } catch (error) {
+                console.error('Erro ao gerar história:', error);
+                // Fallback
+                const fallbackStory = `
+A chuva fina cai sobre as ruínas da cidade esquecida de Eldoria. ${localCharacterProfile.name}, você chegou aqui seguindo rumores sobre os "Fragmentos da Estrela Cadente", artefatos ancestrais que supostamente mantêm o equilíbrio mágico do mundo. 
+
+O Arcanista Alaric, um velho sábio com olhos que brilham com conhecimento ancestral, te encontrou nas ruínas. "Estava esperando por alguém como você", sussurra Alaric, suas mãos trêmulas segurando um mapa antigo. "Os Fragmentos estão espalhados por Eldoria, e forças das trevas buscam usá-los para seus propósitos sombrios. Encontre os Fragmentos antes que seja tarde demais."
+
+Sua missão está clara: viajar por Eldoria, encontrar os Fragmentos da Estrela Cadente e proteger o equilíbrio do mundo. O destino de milhares depende de suas ações.
+
+O que você faz, ${localCharacterProfile.name}?
+                `;
+                addMessage(fallbackStory, 'ai');
+                updateFromStory(fallbackStory);
+                lastStoryContext = fallbackStory;
+            }
+        }
+
+        // Extrair informações da história para atualizar a sidebar
+        function updateFromStory(storyText) {
+            const newQuest = {
+                title: "Encontrar os Fragmentos da Estrela Cadente",
+                status: "Ativa",
+                description: "Proteger os artefatos ancestrais que mantêm o equilíbrio de Eldoria"
+            };
+            
+            const newRelationship = {
+                name: "Alaric",
+                status: "Aliado",
+                description: "Arcanista sábio que conhece os segredos de Eldoria"
+            };
+            
+            localCharacterProfile.quests = [newQuest];
+            localCharacterProfile.relationships = [newRelationship];
+            
+            updateQuestsUI(localCharacterProfile.quests);
+            updateRelationshipsUI(localCharacterProfile.relationships);
+        }
+
+        // Sistema de mensagens
+        function addMessage(text, sender, type = 'normal') {
+            const messageDiv = document.createElement('div');
+            let messageClass = `message-box ${sender === 'user' ? 'user-message' : 'ai-message'}`;
+            
+            if (type === 'combat') {
+                messageClass += ' combat-message';
+            } else if (type === 'level-up') {
+                messageClass += ' level-up-message';
+            } else if (type === 'spell') {
+                messageClass += ' spell-message';
+            }
+            
+            messageDiv.className = messageClass;
+            messageDiv.innerHTML = `
+                <div class="font-bold text-sm mb-1">${sender === 'user' ? 'Você' : 'Mestre IA'}</div>
+                <div class="whitespace-pre-wrap">${text}</div>
+            `;
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+            
+            chatMessages.push({ text, sender, type });
+        }
+
+        // Enviar mensagem para a IA
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text || !localCharacterProfile) return;
+            
+            addMessage(text, 'user');
+            userInput.value = '';
+            
+            // Chance controlada de encontro de combate (apenas se não estiver em combate e não em cooldown)
+            if (!isInCombat && !combatCooldown && Math.random() < 0.2) { // Reduzida para 20%
+                const randomEnemy = Object.keys(enemies)[Math.floor(Math.random() * Object.keys(enemies).length)];
+                setTimeout(() => combatSystem.startCombat(randomEnemy), 1000);
+                return;
+            }
+            
+            // Resposta contextual da IA
+            setTimeout(() => {
+                const contextResponses = [
+                    `Baseado em suas ações, a história se desenvolve... O que mais você gostaria de explorar em Eldoria, ${localCharacterProfile.name}?`,
+                    `Sua decisão tem consequências no mundo. Como você pretende prosseguir em sua missão de encontrar os Fragmentos da Estrela Cadente?`,
+                    `O cenário se adapta às suas escolhas. O que você faz a seguir em sua jornada por Eldoria?`,
+                    `Sua ação altera o curso dos eventos. Qual será seu próximo passo na busca pelos artefatos ancestrais?`
+                ];
+                
+                const randomResponse = contextResponses[Math.floor(Math.random() * contextResponses.length)];
+                addMessage(randomResponse, 'ai');
+                lastStoryContext = randomResponse;
+            }, 1000);
+        }
+
+        // Salvar jogo
+        function saveGame() {
+            if (!localCharacterProfile) {
+                alert('Nenhum jogo ativo para salvar!');
+                return;
+            }
+            
+            const gameData = {
+                character: localCharacterProfile,
+                messages: chatMessages,
+                skillTrees: skillTrees
+            };
+            
+            localStorage.setItem('rpgTextualSave', JSON.stringify(gameData));
+            addMessage('💾 **Jogo salvo com sucesso!** Você pode continuar de onde parou mais tarde.', 'ai');
+        }
+
+        // Carregar jogo
+        function loadGame() {
+            const savedGame = localStorage.getItem('rpgTextualSave');
+            if (!savedGame) {
+                alert('Nenhum jogo salvo encontrado!');
+                return false;
+            }
+            
+            try {
+                const gameData = JSON.parse(savedGame);
+                localCharacterProfile = gameData.character;
+                chatMessages = gameData.messages || [];
+                
+                // Restaurar árvores de habilidade
+                if (gameData.skillTrees) {
+                    Object.keys(gameData.skillTrees).forEach(className => {
+                        if (skillTrees[className]) {
+                            Object.keys(gameData.skillTrees[className]).forEach(skillId => {
+                                if (skillTrees[className][skillId]) {
+                                    skillTrees[className][skillId].level = gameData.skillTrees[className][skillId].level || 0;
+                                }
+                            });
+                        }
+                    });
+                }
+                
+                // Atualizar UI
+                characterSetupModal.style.display = 'none';
+                document.getElementById('character-name-display').textContent = `${localCharacterProfile.name} (${localCharacterProfile.role})`;
+                updateAllSidebarUI(localCharacterProfile);
+                
+                // Habilitar chat
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                
+                // Reconstruir histórico de chat
+                chatArea.innerHTML = '';
+                chatMessages.forEach(msg => {
+                    addMessage(msg.text, msg.sender, msg.type || 'normal');
+                });
+                
+                // Atualizar árvore de habilidades
+                updateSkillTreeUI();
+                
+                addMessage('💾 **Jogo carregado com sucesso!** Bem-vindo de volta, aventureiro!', 'ai');
+                return true;
+            } catch (error) {
+                console.error('Erro ao carregar jogo:', error);
+                alert('Erro ao carregar o jogo salvo!');
+                return false;
+            }
+        }
+
+        // Reset do jogo
+        function resetGame() {
+            if (confirm('Começar um novo jogo? Seu progresso atual será perdido.')) {
+                localCharacterProfile = null;
+                chatMessages = [];
+                chatArea.innerHTML = '<div class="text-center text-gray-500 italic">Crie seu personagem para começar a aventura...</div>';
+                userInput.disabled = true;
+                sendButton.disabled = true;
+                combatUI.classList.add('hidden');
+                skillsSection.classList.add('hidden');
+                document.getElementById('character-name-display').textContent = '...';
+                characterSetupModal.style.display = 'flex';
+                
+                // Resetar árvores de habilidade
+                Object.keys(skillTrees).forEach(className => {
+                    Object.keys(skillTrees[className]).forEach(skillId => {
+                        skillTrees[className][skillId].level = skillId === 'basic' ? 1 : 0;
+                    });
+                });
+                
+                // Resetar sidebar
+                sidebarCharName.textContent = '-';
+                sidebarCharRole.textContent = '-';
+                sidebarCharLevel.textContent = '1';
+                sidebarCharXp.textContent = '0/100';
+                xpBarFill.style.width = '0%';
+                hpValue.textContent = '100/100';
+                mpValue.textContent = '50/50';
+                hpBarFill.style.width = '100%';
+                mpBarFill.style.width = '100%';
+                inventoryList.innerHTML = '<li class="text-gray-400 italic">Inventário vazio</li>';
+                skillsList.innerHTML = '<li class="text-gray-400 italic">Nenhuma habilidade conhecida</li>';
+                questsList.innerHTML = '<li class="text-gray-400 italic">Nenhuma missão ativa.</li>';
+                relationshipsList.innerHTML = '<li class="text-gray-400 italic">Nenhum NPC encontrado.</li>';
+                
+                // Resetar atributos
+                document.getElementById('attr-str').textContent = '10';
+                document.getElementById('attr-dex').textContent = '10';
+                document.getElementById('attr-con').textContent = '10';
+                document.getElementById('attr-int').textContent = '10';
+                document.getElementById('attr-wis').textContent = '10';
+                document.getElementById('attr-cha').textContent = '10';
+                
+                // Parar música
+                if (isAudioPlaying) {
+                    startAmbiance();
+                }
+            }
+        }
+
+        // Event Listeners para seleção de classe
+        document.querySelectorAll('.class-card').forEach(card => {
+            card.addEventListener('click', () => {
+                // Remover seleção anterior
+                document.querySelectorAll('.class-card').forEach(c => {
+                    c.classList.remove('selected');
+                });
+                
+                // Adicionar seleção atual
+                card.classList.add('selected');
+                selectedClass = card.getAttribute('data-class');
+            });
+        });
+
+        // Event Listeners para combate
+        attackBtn.addEventListener('click', () => combatSystem.playerAttack());
+        fleeBtn.addEventListener('click', () => combatSystem.flee());
+        defendBtn.addEventListener('click', () => {
+            addMessage("🛡️ Você assume uma postura defensiva!", 'ai', 'combat');
+            combatSystem.enemyTurn();
+        });
+        skillBtn.addEventListener('click', () => {
+            // Alternar visibilidade da seção de habilidades
+            if (skillsSection.classList.contains('hidden')) {
+                skillsSection.classList.remove('hidden');
+                combatSystem.updateSkillsUI();
+            } else {
+                skillsSection.classList.add('hidden');
+            }
+        });
+
+        // Event Listeners para modal de habilidades
+        skillsModalButton.addEventListener('click', () => {
+            skillsModal.classList.remove('hidden');
+            updateSkillTreeUI();
+        });
+
+        closeSkillsModal.addEventListener('click', () => {
+            skillsModal.classList.add('hidden');
+        });
+
+        // Event Listeners principais
+        saveCharacterButton.addEventListener('click', saveCharacterProfile);
+        sendButton.addEventListener('click', sendMessage);
+        audioToggleButton.addEventListener('click', startAmbiance);
+        resetGameButton.addEventListener('click', resetGame);
+        saveGameButton.addEventListener('click', saveGame);
+        sidebarToggle.addEventListener('click', () => sidebar.classList.toggle('open'));
+
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Inicialização
+        characterSetupModal.style.display = 'flex';
+        
+        // Tentar carregar jogo salvo ao iniciar
+        window.addEventListener('load', () => {
+            const savedGame = localStorage.getItem('rpgTextualSave');
+            if (savedGame) {
+                if (confirm('Encontramos um jogo salvo. Deseja continuar de onde parou?')) {
+                    if (loadGame()) {
+                        return;
+                    }
+                }
+            }
+            characterSetupModal.style.display = 'flex';
+        });
+
+        // Discussão sobre Multiplayer
+        console.log(`
+        ===========================================
+        POSSIBILIDADES DE MULTIPLAYER:
+        
+        1. Sistema de Salas:
+           - Criar/entrar em salas com até 4 jogadores
+           - Cada jogador com seu próprio personagem
+           - Mestre IA adapta a história para o grupo
+        
+        2. Combate Cooperativo:
+           - Turnos sincronizados entre jogadores
+           - Combos entre habilidades de diferentes classes
+           - Sistema de buffs/debuffs em grupo
+        
+        3. Economia Compartilhada:
+           - Inventário compartilhado ou individual
+           - Sistema de trocas entre jogadores
+           - Loot distribuído automaticamente
+        
+        4. Missões em Grupo:
+           - Missões específicas para grupos
+           - Objetivos que requerem cooperação
+           - Recompensas baseadas na contribuição
+        
+        5. Sistema de Guildas:
+           - Criação de guildas com jogadores
+           - Recursos compartilhados da guilda
+           - Missões de guilda com recompensas exclusivas
+        
+        TECNOLOGIAS SUGERIDAS:
+        - WebSockets para comunicação em tempo real
+        - Node.js + Socket.io para o servidor
+        - Banco de dados para persistência de personagens
+        - Sistema de matchmaking para formação de grupos
+        ===========================================
+        `);
+    </script>
+</body>
+</html>
